@@ -21,3 +21,5 @@ class VirtualMachine:
                     self.simulator.spawn_obj(id, args[0], args[1]) 
                 case 4:
                     print("world created")
+                case 5:
+                    self.simulator.result()

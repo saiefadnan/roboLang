@@ -2,7 +2,8 @@ OPCODES = {
     "movX": 1,
     "movY": 2,
     "init": 3,
-    "create": 4
+    "create": 4,
+    "show": 5
 }
 
 idToName = {}

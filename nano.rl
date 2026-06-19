@@ -18,7 +18,8 @@ r3.movX(30)
 r3.movY(300)
 r3.movX(200)
 
-r4.movX(100)
-r4.movY(100)
-r4.movX(100)
-r4.movY(100)
+r4.movX(192)
+r4.movY(202)
+
+
+result()

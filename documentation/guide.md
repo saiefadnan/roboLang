@@ -399,16 +399,39 @@ def distance():
 
 ---
 
-# ⚡ PHASE 7 — VM (OPTIONAL OPTIMIZATION)
+# ⚡ PHASE 7 — VM (THE MODERN ENGINE)
 
-Convert AST → bytecode:
+Instead of running the AST directly, we now compile it into bytecode.
 
-```text
-movX 10
-movY 90
+## Step 7.1 — Opcode Mapping (compiler.py)
+Map your nodes to numbers the machine understands:
+```python
+OPCODES = { "movX": 1, "movY": 2, "init": 3, "create": 4, "show": 5 }
 ```
 
-Run faster execution engine.
+## Step 7.2 — The Compiler
+The compiler converts `CommandNodes` into a bytecode list:
+```python
+def compile(self, nodes):
+    bytecode = []
+    for node in nodes:
+        action = OPCODES[node.action]
+        id = self.symbols[node.name]
+        bytecode.append((action, id, node.args))
+    return bytecode
+```
+
+## Step 7.3 — The Virtual Machine (vm.py)
+The VM runs the bytecode and communicates with the Simulator:
+```python
+def run(self, bytecode):
+    for cmd in bytecode:
+        action, id, args = cmd
+        match action:
+            case 1: # movX
+                self.objects[id]['x'] += args[0]
+                self.simulator.move_obj(id, ...)
+```
 
 ---
 

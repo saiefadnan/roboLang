@@ -2,6 +2,7 @@
 TOKEN_INIT = "INIT"
 TOKEN_MOVX = "MOVX"
 TOKEN_MOVY = "MOVY"
+TOKEN_RESULT = "RESULT"
 TOKEN_WORLD = "WORLD"
 
 TOKEN_NUMBER = "NUMBER"
@@ -20,6 +21,7 @@ keywords = {
     "init": TOKEN_INIT,
     "movX": TOKEN_MOVX,
     "movY": TOKEN_MOVY,
+    "result": TOKEN_RESULT
 }
 single_char_tokens = {
     "(": TOKEN_LPAREN,

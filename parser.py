@@ -1,3 +1,4 @@
+from lexer import TOKEN_RESULT
 from commandnode import CommandNode
 from lexer import TOKEN_WORLD
 from lexer import TOKEN_VARIABLE
@@ -63,6 +64,12 @@ class Parser():
         y = self.expect_number()
         self.eat("RPAREN")
         return [x, y]
+    
+    def parse_result(self):
+        self.eat("RESULT")
+        self.eat("LPAREN")
+        self.eat("RPAREN")
+        return []
 
     def parse(self):
         nodes = []
@@ -83,6 +90,9 @@ class Parser():
             elif self.curr_token[0] == TOKEN_WORLD:
                 args = self.parse_world()
                 nodes.append(CommandNode("world", "create", args))
+            elif self.curr_token[0] == TOKEN_RESULT:
+                args = self.parse_result()
+                nodes.append(CommandNode("result", "show", args))
             else:
                 self.error("Invalid statement")
         return nodes
