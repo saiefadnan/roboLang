@@ -46,57 +46,53 @@ class Lexer:
         raise SystemError(f"Lexer error at position {self.pos}: {msg} ('{self.current_char}')")
 
     def advance(self):
-        self.pos +=1
-        if self.pos< len(self.text):
+        self.pos += 1
+        if self.pos < len(self.text):
             self.current_char = self.text[self.pos]
         else:
             self.current_char = None
-    
+
+    def _id(self):
+        result = ""
+        while self.current_char and (self.current_char.isalnum() or self.current_char == '_'):
+            result += self.current_char
+            self.advance()
+        
+        token_type = keywords.get(result, TOKEN_VARIABLE)
+        return (token_type, result)
+
     def number(self):
-        result=""
+        result = ""
         while self.current_char and self.current_char.isdigit():
             result += self.current_char
             self.advance()
-        return int(result)
+        return (TOKEN_NUMBER, int(result))
 
-    def getObjectName(self):
-        result = ""
-        while self.current_char and (self.current_char.isalpha() or self.current_char.isdigit()):
-            result += self.current_char
-            self.advance()
-        if self.current_char == ".":
-            return result
-        return None
-    
     def get_next_token(self):
         while self.current_char:
+            if self.current_char == "\n":
+                self.advance()
+                return (TOKEN_NEWLINE, "\n")
+
             if self.current_char.isspace():
                 self.advance()
-                if self.current_char == "\n":
-                    return (TOKEN_NEWLINE, self.current_char)
                 continue
 
-
             if self.current_char.isdigit():
-                return (TOKEN_NUMBER, self.number())
+                return self.number()
 
-            for word in keywords:
-                if self.text[self.pos: self.pos+len(word)] == word:
-                    self.pos += len(word)
-                    self.current_char = self.text[self.pos]
-                    return (keywords[word], word)
-            
-            for char in single_char_tokens:
-                if self.current_char == char:
-                    self.advance()  
-                    return (single_char_tokens[char], char)
-            
-            objName = self.getObjectName()
-            if objName:
-                return (TOKEN_VARIABLE , objName)
-            
-            self.error("Invalid character")
-            return
+            if self.current_char.isalpha() or self.current_char == '_':
+                return self._id()
+
+            if self.current_char in single_char_tokens:
+                char = self.current_char
+                token_type = single_char_tokens[char]
+                self.advance()
+                return (token_type, char)
+
+            self.error()
+
+        return (TOKEN_EOF, None)
          
             
         return (TOKEN_EOF, None)
