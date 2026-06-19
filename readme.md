@@ -1,3 +1,5 @@
+![alt text](image.png)
+<!-- 
 # roboLang
 
 ### A Domain-Specific Programming Language for Autonomous Robotics
@@ -368,4 +370,4 @@ removY_home()
 Where:
 
 > The programmer defines intent
-> The system defines execution
+> The system defines execution -->
