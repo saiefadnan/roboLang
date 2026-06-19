@@ -6,8 +6,7 @@ r3.init(80, 180)
 r4.init(300, 40)
 
 # r1.movX(150)
-r1.movY(150)
-r1.movX(220)
+r1.movY(150) r1.movX(220)
 r1.movY(80)
 
 r2.movY(200)
