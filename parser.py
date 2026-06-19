@@ -1,3 +1,5 @@
+from lexer import TOKEN_COMMENT
+from lexer import TOKEN_NEWLINE
 from lexer import TOKEN_RESULT
 from commandnode import CommandNode
 from lexer import TOKEN_WORLD
@@ -71,10 +73,30 @@ class Parser():
         self.eat("RPAREN")
         return []
 
+    
+    def parse_newline(self):
+        self.eat("NEWLINE")
+        return []
+    
+    def parse_comment(self):
+        self.eat("COMMENT")
+        while self.curr_token[0]!=TOKEN_EOF and self.curr_token[0] != TOKEN_NEWLINE:
+            print(self.curr_token)
+            self.curr_token = self.lexer.get_next_token()
+        return []
+
     def parse(self):
         nodes = []
         while self.curr_token[0] != TOKEN_EOF:
-            if self.curr_token[0] == TOKEN_VARIABLE:
+            if self.curr_token[0] == TOKEN_COMMENT:
+                args = self.parse_comment()
+                nodes.append(CommandNode("comment", "skip", args))
+
+            elif self.curr_token[0] == TOKEN_NEWLINE:
+                args = self.parse_newline()
+                nodes.append(CommandNode("newline", "skip", args))
+
+            elif self.curr_token[0] == TOKEN_VARIABLE:
                 objName = self.parse_obj()
                 if self.curr_token[0] == TOKEN_MOVX:
                     args = self.parse_movX()

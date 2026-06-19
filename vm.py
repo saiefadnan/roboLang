@@ -11,14 +11,21 @@ class VirtualMachine:
             action, id, args = bytecode
             match   action:
                 case 1:
+                    if id not in self.objects:
+                        self.error("Object not initialized")
                     self.objects[id]['x'] += args[0]
                     self.simulator.move_obj(id, self.objects[id]['x'], self.objects[id]['y'])
                 case 2:
+                    if id not in self.objects:
+                        self.error("Object not initialized")
                     self.objects[id]['y'] += args[0]
                     self.simulator.move_obj(id, self.objects[id]['x'], self.objects[id]['y'])   
                 case 3:
-                    self.objects[id] = {'x': args[0], 'y': args[1]}
-                    self.simulator.spawn_obj(id, args[0], args[1]) 
+                    if id not in self.objects:
+                        self.objects[id] = {'x': args[0], 'y': args[1]}
+                        self.simulator.spawn_obj(id, args[0], args[1]) 
+                    else:
+                        self.error("Object already initialized")
                 case 4:
                     print("world created")
                 case 5:

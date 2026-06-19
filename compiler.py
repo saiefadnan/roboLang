@@ -24,6 +24,8 @@ class Compiler:
         bytecode = []
 
         for node in nodes:
+            if node.action == "skip":
+                continue
             action = OPCODES[node.action]
             id = self.get_obj_id(node.name)
             idToName[id] = node.name

@@ -13,6 +13,8 @@ TOKEN_RPAREN = "RPAREN"
 TOKEN_DOT = "DOT"
 TOKEN_COMMA = "COMMA"
 TOKEN_EQ = "="
+TOKEN_COMMENT = "COMMENT"
+TOKEN_NEWLINE = "NEWLINE"
 TOKEN_EOF = "EOF"
 
 # dictionaries
@@ -21,7 +23,7 @@ keywords = {
     "init": TOKEN_INIT,
     "movX": TOKEN_MOVX,
     "movY": TOKEN_MOVY,
-    "result": TOKEN_RESULT
+    "result": TOKEN_RESULT,
 }
 single_char_tokens = {
     "(": TOKEN_LPAREN,
@@ -29,6 +31,7 @@ single_char_tokens = {
     ".": TOKEN_DOT,
     ",": TOKEN_COMMA,
     "=": TOKEN_EQ,
+    "#": TOKEN_COMMENT
 }
 
 
@@ -69,7 +72,10 @@ class Lexer:
         while self.current_char:
             if self.current_char.isspace():
                 self.advance()
+                if self.current_char == "\n":
+                    return (TOKEN_NEWLINE, self.current_char)
                 continue
+
 
             if self.current_char.isdigit():
                 return (TOKEN_NUMBER, self.number())
