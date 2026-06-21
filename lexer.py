@@ -1,34 +1,27 @@
-from registry import KEYWORD_TO_TOKEN
+from registry import KEYWORD_TO_TOKEN, SYMBOLS
 
 # define tokens
 TOKEN_NUMBER = "NUMBER"
 TOKEN_STRING = "STRING"
 TOKEN_VARIABLE = "VARIABLE"
-TOKEN_LPAREN = "LPAREN"
-TOKEN_RPAREN = "RPAREN"
-TOKEN_DOT = "DOT"
-TOKEN_COMMA = "COMMA"
-TOKEN_EQ = "="
-TOKEN_COMMENT = "COMMENT"
 TOKEN_NEWLINE = "NEWLINE"
 TOKEN_EOF = "EOF"
 
 # Dynamic keywords from registry
 keywords = KEYWORD_TO_TOKEN
 
-# Add other tokens from registry if they have specific names not covered by logic
-from registry import TOKEN_TO_CONFIG
-for token_name in TOKEN_TO_CONFIG:
+# Dynamic symbols from registry
+single_char_tokens = SYMBOLS
+
+# Add symbols to globals so they can be referenced as TOKEN_LPAREN etc.
+for sym, token_name in SYMBOLS.items():
     globals()[f"TOKEN_{token_name}"] = token_name
 
-single_char_tokens = {
-    "(": TOKEN_LPAREN,
-    ")": TOKEN_RPAREN,
-    ".": TOKEN_DOT,
-    ",": TOKEN_COMMA,
-    "=": TOKEN_EQ,
-    "#": TOKEN_COMMENT
-}
+# Add other tokens from registry configs if needed
+from registry import TOKEN_TO_CONFIG
+for token_name in TOKEN_TO_CONFIG:
+    if f"TOKEN_{token_name}" not in globals():
+        globals()[f"TOKEN_{token_name}"] = token_name
 
 
 # breaks source code into meaningful tokens
@@ -36,10 +29,11 @@ class Lexer:
     def __init__(self, text):
         self.text = text
         self.pos = 0
-        self.current_char = text[self.pos]
+        self.current_char = text[self.pos] if text else None
 
     def error(self, msg="Invalid character"):
-        raise SystemError(f"Lexer error at position {self.pos}: {msg} ('{self.current_char}')")
+        char = self.current_char if self.current_char else "EOF"
+        raise SystemError(f"Lexer error at position {self.pos}: {msg} ('{char}')")
 
     def advance(self):
         self.pos += 1
@@ -102,7 +96,3 @@ class Lexer:
             self.error()
 
         return (TOKEN_EOF, None)
-         
-            
-        return (TOKEN_EOF, None)
-

@@ -1,4 +1,4 @@
-from lexer import TOKEN_COMMENT, TOKEN_NEWLINE, TOKEN_VARIABLE, TOKEN_DOT, TOKEN_EOF, TOKEN_COMMA, TOKEN_LPAREN, TOKEN_RPAREN, TOKEN_STRING
+from lexer import TOKEN_COMMENT, TOKEN_NEWLINE, TOKEN_VARIABLE, TOKEN_DOT, TOKEN_EOF, TOKEN_COMMA, TOKEN_LPAREN, TOKEN_RPAREN, TOKEN_STRING, TOKEN_NUMBER
 from commandnode import CommandNode
 from registry import TOKEN_TO_CONFIG
 
@@ -32,6 +32,24 @@ class Parser():
         self.eat("DOT")
         return obj
 
+    def parse_arg(self, expected_type):
+        if self.curr_token[0] == TOKEN_NUMBER and expected_type == "int":
+            return self.expect_number()
+        elif self.curr_token[0] == TOKEN_STRING and expected_type == "str":
+            return self.expect_string()
+        elif self.curr_token[0] == TOKEN_VARIABLE:
+            # Maybe it's a variable or property access
+            name = self.curr_token[1]
+            self.eat(TOKEN_VARIABLE)
+            if self.curr_token[0] == TOKEN_DOT:
+                self.eat(TOKEN_DOT)
+                prop = self.curr_token[1]
+                self.eat(TOKEN_VARIABLE)
+                return {"type": "variable_prop", "name": name, "prop": prop}
+            return {"type": "variable", "name": name}
+        else:
+            self.error(f"Expected {expected_type}, got {self.curr_token[0]}")
+
     def parse_command(self, obj_name, config):
         self.eat(config["token"])
         args = []
@@ -40,13 +58,7 @@ class Parser():
         if len(arg_types) > 0:
             self.eat("LPAREN")
             for i, expected_type in enumerate(arg_types):
-                if expected_type == "int":
-                    args.append(self.expect_number())
-                elif expected_type == "str":
-                    args.append(self.expect_string())
-                else:
-                    self.error(f"Unknown registry arg_type '{expected_type}'")
-                
+                args.append(self.parse_arg(expected_type))
                 if i < len(arg_types) - 1:
                     self.eat("COMMA")
             self.eat("RPAREN")
@@ -78,6 +90,31 @@ class Parser():
             elif token_type == TOKEN_NEWLINE:
                 self.parse_newline()
                 nodes.append(CommandNode("newline", "skip", []))
+
+            elif token_type == "VAR":
+                # Assignment: var hello = r2.getPos()
+                self.eat("VAR")
+                var_name = self.curr_token[1]
+                self.eat(TOKEN_VARIABLE)
+                self.eat("EQ")
+                
+                # Right hand side can be a command or a value
+                if self.curr_token[0] == TOKEN_VARIABLE:
+                    obj_name = self.parse_obj_prefix()
+                    cmd_token = self.curr_token[0]
+                    if cmd_token in TOKEN_TO_CONFIG:
+                        config = TOKEN_TO_CONFIG[cmd_token]
+                        rhs = self.parse_command(obj_name, config)
+                    else:
+                        self.error(f"Unknown command '{cmd_token}'")
+                elif self.curr_token[0] == "NUMBER":
+                    rhs = self.expect_number()
+                elif self.curr_token[0] == "STRING":
+                    rhs = self.expect_string()
+                else:
+                    self.error(f"Unexpected token {self.curr_token[0]} in assignment")
+                
+                nodes.append(CommandNode(var_name, "assign", [rhs]))
 
             elif token_type == TOKEN_VARIABLE:
                 obj_name = self.parse_obj_prefix()

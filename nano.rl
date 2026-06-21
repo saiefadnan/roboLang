@@ -23,4 +23,10 @@ r1.say("Hello World!")
 r4.say("I am here too.")
 
 r1.patrol(10)
+
+var x = r2.getPos()
+var y = x.x
+show(x.x)
+show(x.y)
+
 result()

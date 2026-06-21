@@ -1,9 +1,10 @@
-from registry import COMMANDS
+from registry import COMMANDS, CORE_OPCODES
+from commandnode import CommandNode
 
 OPCODES = {k: v["opcode"] for k, v in COMMANDS.items()}
+OPCODES.update(CORE_OPCODES)
 
 idToName = {}
-
 
 class Compiler:
     def __init__(self):
@@ -16,16 +17,44 @@ class Compiler:
             self.next_id += 1
         return self.symbols[name]
     
-    def compile(self, nodes):
+    def compile_node(self, node):
         bytecode = []
-
-        for node in nodes:
-            if node.action == "skip":
-                continue
-            action = OPCODES[node.action]
-            id = self.get_obj_id(node.name)
-            idToName[id] = node.name
-            args = node.args
-            bytecode.append((action, id, args))
-        return bytecode
+        if node.action == "skip":
+            return []
+        
+        if node.action == "assign":
+            rhs = node.args[0]
+            if isinstance(rhs, CommandNode):
+                bytecode.extend(self.compile_node(rhs))
+            else:
+                # Load literal
+                bytecode.append((12, 0, [rhs]))
             
+            var_id = self.get_obj_id(node.name)
+            idToName[var_id] = node.name
+            bytecode.append((OPCODES["STORE"], var_id, []))
+            return bytecode
+
+        # Normal command
+        action = OPCODES[node.action]
+        obj_id = self.get_obj_id(node.name)
+        idToName[obj_id] = node.name
+        
+        # Compile/Resolve arguments (map names to IDs for variable access)
+        resolved_args = []
+        for arg in node.args:
+            if isinstance(arg, dict) and arg.get("type") in ["variable", "variable_prop"]:
+                new_arg = arg.copy()
+                new_arg["id"] = self.get_obj_id(arg["name"])
+                resolved_args.append(new_arg)
+            else:
+                resolved_args.append(arg)
+                
+        bytecode.append((action, obj_id, resolved_args))
+        return bytecode
+
+    def compile(self, nodes):
+        full_bytecode = []
+        for node in nodes:
+            full_bytecode.extend(self.compile_node(node))
+        return full_bytecode

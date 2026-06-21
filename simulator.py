@@ -1,6 +1,13 @@
 from compiler import idToName
 import turtle
 
+class PosResult:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    def __repr__(self):
+        return f"Pos(x={self.x}, y={self.y})"
+
 class Simulator:
     def __init__(self, world):
         self.world = world
@@ -17,7 +24,13 @@ class Simulator:
         obj.penup()
         obj.goto(x, y)
         obj.pendown()
-        obj.write(name, align="center", font=("Arial", 12, "normal"))
+        
+        label = turtle.Turtle()
+        label.hideturtle()
+        label.penup()
+        label.goto(x, y + 15)
+        label.write(name, align="center", font=("Arial", 12, "normal"))
+
         self.objs[id] = {
             "obj": obj,
             "x": x,
@@ -50,13 +63,12 @@ class Simulator:
         print("\nCollision Report:")
         ids = list(self.objs.keys())
         collided = False
+        
         for i in range(len(ids)):
             for j in range(i + 1, len(ids)):
-                obj1 = self.objs[ids[i]]
-                obj2 = self.objs[ids[j]]
-                if (obj1["x"] == obj2["x"] and obj1["y"] == obj2["y"]):
-                    print(f"{idToName[ids[i]]} and {idToName[ids[j]]} collided!!!")
-                    collided = True
+               if(self.get_pos(ids[i]) == self.get_pos(ids[j])):
+                   print(f"{idToName[ids[i]]} and {idToName[ids[j]]} collided!!!")
+                   collided = True
         if not collided:
             print("No collisions detected.")
 
@@ -67,6 +79,16 @@ class Simulator:
     def say(self, id, message):
         name = idToName[id]
         print(f"[{name}] says: {message}")
+
+    def get_pos(self, id):
+        name = idToName[id]
+        x = self.objs[id]['x']
+        y = self.objs[id]['y']
+        print(f"[{name}] position recorded: ({x}, {y})")
+        return PosResult(x, y)
+
+    def show(self, value):
+        print(f"DISPLAY: {value}")
         
     def update(self):
         self.screen.update()

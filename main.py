@@ -14,9 +14,18 @@ if len(code) == 0:
     exit()
 
 lexer = Lexer(code)
+
+# token = lexer.get_next_token()
+# while token[0] != "EOF":
+#     print(token)
+#     token = lexer.get_next_token()
+
+# print(token)
+
 parser = Parser(lexer)
 ast = parser.parse()
 
+# print(ast)
 
 # First visit to get the world for simulator setup
 # Actually, we can just look for the world node in AST
@@ -37,6 +46,8 @@ simulator = Simulator(world)
 
 compiler = Compiler()
 bytecode = compiler.compile(ast)
+
+print(bytecode)
 
 vm = VirtualMachine(simulator)
 vm.run(bytecode)

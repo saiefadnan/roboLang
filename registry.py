@@ -62,10 +62,48 @@ COMMANDS = {
         "arg_types": ["str"],
         "handler": "say",
         "type": "object"
+    },
+    "getPos": {
+        "token": "GETPOS",
+        "opcode": 8,
+        "arg_types": [],
+        "handler": "get_pos",   
+        "type": "object"
+    },
+    "show": {
+        "token": "SHOW",
+        "opcode": 9,
+        "arg_types": ["int"],
+        "handler": "show",
+        "type": "global"
     }
+}
+
+# Internal Opcodes
+CORE_OPCODES = {
+    "STORE": -10,
+    "LOAD": -11,
+    "LOAD_VAL": -12
+}
+
+CORE_KEYWORDS = {
+    "var": "VAR"
+}
+
+SYMBOLS = {
+    "(": "LPAREN",
+    ")": "RPAREN",
+    ".": "DOT",
+    ",": "COMMA",
+    "=": "EQ",
+    "#": "COMMENT"
 }
 
 # Calculated Metadata
 OPCODE_TO_CMD = {v["opcode"]: k for k, v in COMMANDS.items()}
+OPCODE_TO_CMD.update({v: k for k, v in CORE_OPCODES.items()})
+print(OPCODE_TO_CMD)
 KEYWORD_TO_TOKEN = {k: v["token"] for k, v in COMMANDS.items()}
+KEYWORD_TO_TOKEN.update(CORE_KEYWORDS)
+
 TOKEN_TO_CONFIG = {v["token"]: {"name": k, **v} for k, v in COMMANDS.items()}
