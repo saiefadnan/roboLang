@@ -1,14 +1,6 @@
-from lexer import TOKEN_COMMENT
-from lexer import TOKEN_NEWLINE
-from lexer import TOKEN_RESULT
+from lexer import TOKEN_COMMENT, TOKEN_NEWLINE, TOKEN_VARIABLE, TOKEN_DOT, TOKEN_EOF, TOKEN_COMMA, TOKEN_LPAREN, TOKEN_RPAREN, TOKEN_STRING
 from commandnode import CommandNode
-from lexer import TOKEN_WORLD
-from lexer import TOKEN_VARIABLE
-from lexer import TOKEN_INIT
-from lexer import TOKEN_MOVY
-from lexer import TOKEN_MOVX
-from lexer import TOKEN_EOF
-
+from registry import TOKEN_TO_CONFIG
 
 class Parser():
     def __init__(self, lexer):
@@ -29,92 +21,78 @@ class Parser():
         self.eat("NUMBER")
         return value
 
-    def parse_init(self):
-        self.eat("INIT")
-        self.eat("LPAREN")
-        x = self.expect_number()
-        self.eat("COMMA")
-        y = self.expect_number()
-        self.eat("RPAREN")
-        return [x, y]
+    def expect_string(self):
+        value = self.curr_token[1]
+        self.eat("STRING")
+        return value
 
-    def parse_movX(self):
-        self.eat("MOVX")
-        self.eat("LPAREN")
-        x = self.expect_number()
-        self.eat("RPAREN")
-        return [x]
-    
-    def parse_movY(self):
-        self.eat("MOVY")
-        self.eat("LPAREN")
-        y = self.expect_number()
-        self.eat("RPAREN")
-        return [y]
-    
-    def parse_obj(self):
+    def parse_obj_prefix(self):
         obj = self.curr_token[1]
         self.eat("VARIABLE")
         self.eat("DOT")
         return obj
 
-    def parse_world(self):
-        self.eat("WORLD")
-        self.eat("LPAREN")
-        x = self.expect_number()
-        self.eat("COMMA")
-        y = self.expect_number()
-        self.eat("RPAREN")
-        return [x, y]
-    
-    def parse_result(self):
-        self.eat("RESULT")
-        self.eat("LPAREN")
-        self.eat("RPAREN")
-        return []
+    def parse_command(self, obj_name, config):
+        self.eat(config["token"])
+        args = []
+        arg_types = config.get("arg_types", [])
+        
+        if len(arg_types) > 0:
+            self.eat("LPAREN")
+            for i, expected_type in enumerate(arg_types):
+                if expected_type == "int":
+                    args.append(self.expect_number())
+                elif expected_type == "str":
+                    args.append(self.expect_string())
+                else:
+                    self.error(f"Unknown registry arg_type '{expected_type}'")
+                
+                if i < len(arg_types) - 1:
+                    self.eat("COMMA")
+            self.eat("RPAREN")
+        elif self.curr_token[0] == "LPAREN": # Optional empty parens
+            self.eat("LPAREN")
+            self.eat("RPAREN")
+            
+        return CommandNode(obj_name, config["name"], args)
 
-    
     def parse_newline(self):
         self.eat("NEWLINE")
         return []
     
     def parse_comment(self):
         self.eat("COMMENT")
-        while self.curr_token[0]!=TOKEN_EOF and self.curr_token[0] != TOKEN_NEWLINE:
-            print(self.curr_token)
+        while self.curr_token[0] != TOKEN_EOF and self.curr_token[0] != TOKEN_NEWLINE:
             self.curr_token = self.lexer.get_next_token()
         return []
 
     def parse(self):
         nodes = []
         while self.curr_token[0] != TOKEN_EOF:
-            if self.curr_token[0] == TOKEN_COMMENT:
-                args = self.parse_comment()
-                nodes.append(CommandNode("comment", "skip", args))
+            token_type = self.curr_token[0]
 
-            elif self.curr_token[0] == TOKEN_NEWLINE:
-                args = self.parse_newline()
-                nodes.append(CommandNode("newline", "skip", args))
+            if token_type == TOKEN_COMMENT:
+                self.parse_comment()
+                nodes.append(CommandNode("comment", "skip", []))
 
-            elif self.curr_token[0] == TOKEN_VARIABLE:
-                objName = self.parse_obj()
-                if self.curr_token[0] == TOKEN_MOVX:
-                    args = self.parse_movX()
-                    nodes.append(CommandNode(objName, "movX", args))
-                elif self.curr_token[0] == TOKEN_MOVY:
-                    args = self.parse_movY()
-                    nodes.append(CommandNode(objName, "movY", args))
-                elif self.curr_token[0] == TOKEN_INIT:
-                    args = self.parse_init()
-                    nodes.append(CommandNode(objName, "init", args))
+            elif token_type == TOKEN_NEWLINE:
+                self.parse_newline()
+                nodes.append(CommandNode("newline", "skip", []))
+
+            elif token_type == TOKEN_VARIABLE:
+                obj_name = self.parse_obj_prefix()
+                cmd_token = self.curr_token[0]
+                if cmd_token in TOKEN_TO_CONFIG:
+                    config = TOKEN_TO_CONFIG[cmd_token]
+                    nodes.append(self.parse_command(obj_name, config))
                 else:
-                    self.error("Invalid statement")
-            elif self.curr_token[0] == TOKEN_WORLD:
-                args = self.parse_world()
-                nodes.append(CommandNode("world", "create", args))
-            elif self.curr_token[0] == TOKEN_RESULT:
-                args = self.parse_result()
-                nodes.append(CommandNode("result", "show", args))
+                    self.error(f"Unknown command '{cmd_token}' after object '{obj_name}'")
+
+            elif token_type in TOKEN_TO_CONFIG:
+                config = TOKEN_TO_CONFIG[token_type]
+                nodes.append(self.parse_command(config.get("default_obj", "global"), config))
+            
             else:
-                self.error("Invalid statement")
-        return nodes
+                self.error(f"Unexpected token {token_type}")
+
+        return nodes

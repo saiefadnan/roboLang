@@ -1,10 +1,6 @@
-OPCODES = {
-    "movX": 1,
-    "movY": 2,
-    "init": 3,
-    "create": 4,
-    "show": 5
-}
+from registry import COMMANDS
+
+OPCODES = {k: v["opcode"] for k, v in COMMANDS.items()}
 
 idToName = {}
 

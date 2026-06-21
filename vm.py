@@ -1,32 +1,56 @@
+from registry import COMMANDS, OPCODE_TO_CMD
+
 class VirtualMachine:
     def __init__(self, simulator):
         self.simulator = simulator
         self.objects = {}
     
     def error(self, msg):
-        raise SyntaxError(f"VM error: {msg}")
+        raise SystemError(f"VM error: {msg}")
     
     def run(self, bytecode):
-        for bytecode in bytecode:
-            action, id, args = bytecode
-            match   action:
-                case 1:
-                    if id not in self.objects:
-                        self.error("Object not initialized")
-                    self.objects[id]['x'] += args[0]
-                    self.simulator.move_obj(id, self.objects[id]['x'], self.objects[id]['y'])
-                case 2:
-                    if id not in self.objects:
-                        self.error("Object not initialized")
-                    self.objects[id]['y'] += args[0]
-                    self.simulator.move_obj(id, self.objects[id]['x'], self.objects[id]['y'])   
-                case 3:
-                    if id not in self.objects:
-                        self.objects[id] = {'x': args[0], 'y': args[1]}
-                        self.simulator.spawn_obj(id, args[0], args[1]) 
-                    else:
-                        self.error("Object already initialized")
-                case 4:
-                    print("world created")
-                case 5:
-                    self.simulator.result()
+        for cmd in bytecode:
+            opcode, obj_id, args = cmd
+            cmd_name = OPCODE_TO_CMD.get(opcode)
+            if not cmd_name:
+                self.error(f"Unknown opcode {opcode}")
+            
+            config = COMMANDS[cmd_name]
+            handler_name = config["handler"]
+            
+            # --- GENERIC STATE MANAGEMENT ---
+            # Initializing state based on state_init keys
+            init_keys = config.get("state_init")
+            if init_keys:
+                self.objects[obj_id] = {}
+                for i, key in enumerate(init_keys):
+                    if i < len(args):
+                        self.objects[obj_id][key] = args[i]
+            
+            # Updating state based on state_update rules
+            update_rules = config.get("state_update")
+            if update_rules:
+                if obj_id not in self.objects:
+                    self.error(f"Object {obj_id} not initialized")
+                
+                for state_key, rule in update_rules.items():
+                    arg_idx = rule["arg_idx"]
+                    op = rule["op"]
+                    if arg_idx < len(args):
+                        val = args[arg_idx]
+                        if op == "add":
+                            self.objects[obj_id][state_key] += val
+                        elif op == "set":
+                            self.objects[obj_id][state_key] = val
+                        else:
+                            self.error(f"Unknown state operation '{op}'")
+
+            # --- DYNAMIC DISPATCH ---
+            if hasattr(self.simulator, handler_name):
+                handler = getattr(self.simulator, handler_name)
+                if config.get("type") == "object":
+                    handler(obj_id, *args)
+                else:
+                    handler(*args)
+            else:
+                self.error(f"Simulator missing required handler '{handler_name}' for {cmd_name}")

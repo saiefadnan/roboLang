@@ -1,13 +1,9 @@
+from registry import KEYWORD_TO_TOKEN
+
 # define tokens
-TOKEN_INIT = "INIT"
-TOKEN_MOVX = "MOVX"
-TOKEN_MOVY = "MOVY"
-TOKEN_RESULT = "RESULT"
-TOKEN_WORLD = "WORLD"
-
 TOKEN_NUMBER = "NUMBER"
+TOKEN_STRING = "STRING"
 TOKEN_VARIABLE = "VARIABLE"
-
 TOKEN_LPAREN = "LPAREN"
 TOKEN_RPAREN = "RPAREN"
 TOKEN_DOT = "DOT"
@@ -17,14 +13,14 @@ TOKEN_COMMENT = "COMMENT"
 TOKEN_NEWLINE = "NEWLINE"
 TOKEN_EOF = "EOF"
 
-# dictionaries
-keywords = {
-    "world": TOKEN_WORLD,
-    "init": TOKEN_INIT,
-    "movX": TOKEN_MOVX,
-    "movY": TOKEN_MOVY,
-    "result": TOKEN_RESULT,
-}
+# Dynamic keywords from registry
+keywords = KEYWORD_TO_TOKEN
+
+# Add other tokens from registry if they have specific names not covered by logic
+from registry import TOKEN_TO_CONFIG
+for token_name in TOKEN_TO_CONFIG:
+    globals()[f"TOKEN_{token_name}"] = token_name
+
 single_char_tokens = {
     "(": TOKEN_LPAREN,
     ")": TOKEN_RPAREN,
@@ -61,6 +57,16 @@ class Lexer:
         token_type = keywords.get(result, TOKEN_VARIABLE)
         return (token_type, result)
 
+    def string(self):
+        result = ""
+        self.advance() # Skip opening quote
+        while self.current_char and self.current_char != '"':
+            result += self.current_char
+            self.advance()
+        if self.current_char == '"':
+            self.advance() # Skip closing quote
+        return (TOKEN_STRING, result)
+
     def number(self):
         result = ""
         while self.current_char and self.current_char.isdigit():
@@ -80,6 +86,9 @@ class Lexer:
 
             if self.current_char.isdigit():
                 return self.number()
+
+            if self.current_char == '"':
+                return self.string()
 
             if self.current_char.isalpha() or self.current_char == '_':
                 return self._id()

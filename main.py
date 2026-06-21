@@ -22,7 +22,7 @@ ast = parser.parse()
 # Actually, we can just look for the world node in AST
 world_node = None
 for node_item in ast:
-    if node_item.name == "world":
+    if node_item.action == "world":
         world_node = node_item
         break
 
