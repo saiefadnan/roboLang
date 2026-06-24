@@ -1,3 +1,4 @@
+from lexer import TOKEN_MINUS
 from lexer import (
     TOKEN_COMMENT, TOKEN_NEWLINE, TOKEN_VARIABLE, TOKEN_DOT,
     TOKEN_EOF, TOKEN_COMMA, TOKEN_LPAREN, TOKEN_RPAREN,
@@ -11,6 +12,13 @@ class Parser:
         self.lexer = lexer
         self.curr_token = lexer.get_next_token()
 
+    def extract_sign(self):
+        sign = 1
+        if self.curr_token[0] == TOKEN_MINUS:
+            self.eat(TOKEN_MINUS)
+            sign = -1
+        return sign    
+
     def error(self, msg="Invalid token"):
         raise SyntaxError(f"Parser error at position {self.lexer.pos}: {msg}")
 
@@ -22,8 +30,8 @@ class Parser:
 
     # --- Primitive parsers ---
 
-    def expect_number(self):
-        value = self.curr_token[1]
+    def expect_number(self, sign):
+        value = sign * self.curr_token[1]
         self.eat("NUMBER")
         return value
 
@@ -48,11 +56,12 @@ class Parser:
           - string literal   (expected_type == "str" or None)
           - variable         (any expected_type)
           - variable.prop    (any expected_type)
-        """
-        tok = self.curr_token[0]
+        """  
+        sign = self.extract_sign()
 
+        tok = self.curr_token[0]
         if tok == TOKEN_NUMBER:
-            return self.expect_number()
+            return self.expect_number(sign)
 
         if tok == TOKEN_STRING:
             return self.expect_string()
@@ -64,8 +73,8 @@ class Parser:
                 self.eat(TOKEN_DOT)
                 prop = self.curr_token[1]
                 self.eat(TOKEN_VARIABLE)
-                return {"type": "variable_prop", "name": name, "prop": prop}
-            return {"type": "variable", "name": name}
+                return {"type": "variable_prop", "name": name, "prop": prop, "sign": sign}
+            return {"type": "variable", "name": name, sign: sign}
 
         self.error(f"Expected argument (int/str/variable), got '{tok}'")
 
@@ -131,6 +140,7 @@ class Parser:
 
     def _parse_rhs(self):
         """Parse the right-hand side of an assignment."""
+        sign = self.extract_sign()
         tok = self.curr_token[0]
         if tok == TOKEN_VARIABLE:
             # Could be `obj.command(...)` or a bare variable / variable.prop
@@ -146,10 +156,10 @@ class Parser:
                     # variable.prop access
                     prop = self.curr_token[1]
                     self.eat(TOKEN_VARIABLE)
-                    return {"type": "variable_prop", "name": name, "prop": prop}
-            return {"type": "variable", "name": name}
+                    return {"type": "variable_prop", "name": name, "prop": prop, "sign": sign}
+            return {"type": "variable", "name": name, "sign": sign}
         if tok == TOKEN_NUMBER:
-            return self.expect_number()
+            return self.expect_number(sign)
         if tok == TOKEN_STRING:
             return self.expect_string()
         self.error(f"Unexpected token '{tok}' in assignment")

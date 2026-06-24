@@ -106,8 +106,13 @@ SYMBOLS = {
     "=": "EQ",
     "#": "COMMENT",
     "{": "LBRACE",
-    "}": "RBRACE"
+    "}": "RBRACE",
+    "+": "PLUS",
+    "-": "MINUS",
+    "*": "MULTIPLY",
+    "/": "DIVIDE"
 }
+
 
 # Calculated Metadata
 OPCODE_TO_CMD = {v["opcode"]: k for k, v in COMMANDS.items()}

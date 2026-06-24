@@ -4,6 +4,8 @@ from registry import KEYWORD_TO_TOKEN, SYMBOLS
 TOKEN_NUMBER = "NUMBER"
 TOKEN_STRING = "STRING"
 TOKEN_VARIABLE = "VARIABLE"
+TOKEN_PLUS = "PLUS"
+TOKEN_MINUS = "MINUS"
 TOKEN_NEWLINE = "NEWLINE"
 TOKEN_EOF = "EOF"
 
@@ -92,7 +94,6 @@ class Lexer:
                 token_type = single_char_tokens[char]
                 self.advance()
                 return (token_type, char)
-
             self.error()
 
         return (TOKEN_EOF, None)

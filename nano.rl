@@ -1,8 +1,9 @@
-world(500, 500)
-var z = 10
-r1.init(0,0)
-repeat(10){
-    show(z)
-    r1.movX(10)
-    r1.movY(10)
+world(500,500)
+var s = 15
+r1.init(250,250)
+repeat(24){
+  r1.movX(s)
+#   r1.rotate(15)
+  r1.movY(s)
+#   r1.rotate(15)
 }
