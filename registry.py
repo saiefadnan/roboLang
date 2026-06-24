@@ -73,7 +73,7 @@ COMMANDS = {
     "show": {
         "token": "SHOW",
         "opcode": 9,
-        "arg_types": ["int"],
+        "arg_types": ["any"],
         "handler": "show",
         "type": "global"
     },

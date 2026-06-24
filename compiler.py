@@ -1,66 +1,64 @@
 from registry import COMMANDS, CORE_OPCODES
 from commandnode import CommandNode
 
+# Flat opcode lookup: command_name -> opcode integer
 OPCODES = {k: v["opcode"] for k, v in COMMANDS.items()}
 OPCODES.update(CORE_OPCODES)
 
+# Human-readable name lookup (populated at compile time)
 idToName = {}
+
 
 class Compiler:
     def __init__(self):
-        self.symbols = {}
+        self.symbols = {}   # name -> unique int ID
         self.next_id = 0
 
     def get_obj_id(self, name):
         if name not in self.symbols:
             self.symbols[name] = self.next_id
+            idToName[self.next_id] = name
             self.next_id += 1
         return self.symbols[name]
-    
+
+    def resolve_arg(self, arg):
+        """Resolve a single argument, embedding the variable's ID for the VM."""
+        if isinstance(arg, dict) and arg.get("type") in ("variable", "variable_prop"):
+            new_arg = arg.copy()
+            new_arg["id"] = self.get_obj_id(arg["name"])
+            return new_arg
+        return arg
+
     def compile_node(self, node):
-        bytecode = []
         if node.action == "skip":
             return []
-        
+
+        # --- Variable assignment ---
         if node.action == "assign":
+            bytecode = []
             rhs = node.args[0]
             if isinstance(rhs, CommandNode):
                 bytecode.extend(self.compile_node(rhs))
             else:
-                # Load literal
-                bytecode.append((-12, 0, [rhs], []))
-            
+                # Load a literal value into last_result
+                bytecode.append((OPCODES["LOAD_VAL"], 0, [rhs], []))
+
             var_id = self.get_obj_id(node.name)
-            idToName[var_id] = node.name
             bytecode.append((OPCODES["STORE"], var_id, [], []))
             return bytecode
 
-        # Normal command
-        action = OPCODES[node.action]
-        obj_id = self.get_obj_id(node.name)
-        idToName[obj_id] = node.name
-        nodes = node.nodes
-        
-        # Compile/Resolve arguments (map names to IDs for variable access)
-        resolved_args = []
-        for arg in node.args:
-           
-            if isinstance(arg, dict) and arg.get("type") in ["variable", "variable_prop"]: 
-                
-                new_arg = arg.copy()
-                new_arg["id"] = self.get_obj_id(arg["name"])
-                resolved_args.append(new_arg)
-            else:
-                resolved_args.append(arg)
-        if len(nodes)>0:
-            full_nested_bytecode = self.compile(nodes)
-            bytecode.append((action, obj_id, resolved_args, full_nested_bytecode))
-        else:
-            bytecode.append((action, obj_id, resolved_args, []))
-        return bytecode
+        # --- Normal command ---
+        opcode   = OPCODES[node.action]
+        obj_id   = self.get_obj_id(node.name)
+        resolved = [self.resolve_arg(a) for a in node.args]
+
+        # Recursively compile nested block (e.g. repeat body)
+        body_bytecode = self.compile(node.nodes) if node.nodes else []
+
+        return [(opcode, obj_id, resolved, body_bytecode)]
 
     def compile(self, nodes):
-        full_bytecode = []
+        result = []
         for node in nodes:
-            full_bytecode.extend(self.compile_node(node))
-        return full_bytecode
+            result.extend(self.compile_node(node))
+        return result
