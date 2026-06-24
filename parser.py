@@ -8,13 +8,13 @@ class Parser():
         self.curr_token = lexer.get_next_token()
     
     def error(self, msg="Invalid token"):
-        raise SyntaxError(f"Parser error at position {self.lexer.pos}: {msg} ('{self.curr_token[0]}')")
+        raise SyntaxError(f"Parser error at position {self.lexer.pos}: {msg}")
     
     def eat(self, token_type):
         if self.curr_token[0] == token_type:
             self.curr_token = self.lexer.get_next_token()
         else:
-            self.error(f"Expected {token_type}, got {self.curr_token[0]}")
+            self.error(f"Expected {token_type}, got {self.curr_token[0]}: {self.curr_token}")
 
     def expect_number(self):
         value = self.curr_token[1]
@@ -38,7 +38,6 @@ class Parser():
         elif self.curr_token[0] == TOKEN_STRING and expected_type == "str":
             return self.expect_string()
         elif self.curr_token[0] == TOKEN_VARIABLE:
-            # Maybe it's a variable or property access
             name = self.curr_token[1]
             self.eat(TOKEN_VARIABLE)
             if self.curr_token[0] == TOKEN_DOT:
@@ -64,9 +63,24 @@ class Parser():
             self.eat("RPAREN")
         elif self.curr_token[0] == "LPAREN": # Optional empty parens
             self.eat("LPAREN")
+            if(self.curr_token[0]==TOKEN_VARIABLE):
+                self.eat(TOKEN_VARIABLE)
+                args.append(self.expect_number())
             self.eat("RPAREN")
+        if config.get("block", False):
+            nodes = self.parse_block()
+            return CommandNode(obj_name, config["name"], args, nodes)
             
         return CommandNode(obj_name, config["name"], args)
+
+    def parse_block(self):
+        self.eat("LBRACE")
+        nodes = []
+        while self.curr_token[0] != "RBRACE":
+            self.run(nodes)
+        self.eat("RBRACE")
+        print(f"this is it {nodes}")
+        return nodes
 
     def parse_newline(self):
         self.eat("NEWLINE")
@@ -78,58 +92,77 @@ class Parser():
             self.curr_token = self.lexer.get_next_token()
         return []
 
-    def parse(self):
-        nodes = []
-        while self.curr_token[0] != TOKEN_EOF:
-            token_type = self.curr_token[0]
+    def commandOrValue(self):
+        if self.curr_token[0] == TOKEN_VARIABLE:
+            obj_name = self.parse_obj_prefix()
+            cmd_token = self.curr_token[0]
+            if cmd_token in TOKEN_TO_CONFIG:
+                config = TOKEN_TO_CONFIG[cmd_token]
+                rhs = self.parse_command(obj_name, config)
+            else:
+                self.error(f"Unknown command '{cmd_token}'")
+        elif self.curr_token[0] == "NUMBER":
+            rhs = self.expect_number()
+        elif self.curr_token[0] == "STRING":
+            rhs = self.expect_string()
+        else:
+            self.error(f"Unexpected token {self.curr_token[0]} in assignment")
+        return rhs
 
-            if token_type == TOKEN_COMMENT:
-                self.parse_comment()
-                nodes.append(CommandNode("comment", "skip", []))
+    def command(self, nodes):
+        token_type = self.curr_token[0]
+        config = TOKEN_TO_CONFIG[token_type]
+        nodes.append(self.parse_command(config.get("default_obj", "global"), config))
 
-            elif token_type == TOKEN_NEWLINE:
-                self.parse_newline()
-                nodes.append(CommandNode("newline", "skip", []))
+    def newline(self, nodes):
+        token_type = self.curr_token[0]
+        if token_type == TOKEN_NEWLINE:
+            self.parse_newline()
+            nodes.append(CommandNode("newline", "skip", []))
+            return True
+        return False
 
-            elif token_type == "VAR":
-                # Assignment: var hello = r2.getPos()
+
+    def comment(self, nodes):
+        token_type = self.curr_token[0]
+        if token_type == TOKEN_COMMENT:
+            self.parse_comment()
+            nodes.append(CommandNode("comment", "skip", []))
+            return True
+        return False
+
+
+    def run(self, nodes):
+        token_type = self.curr_token[0]
+        
+        if(self.comment(nodes)):
+            return
+        if(self.newline(nodes)):
+            return
+
+        if token_type == "VAR":
+            # Assignment: var hello = r2.getPos()
                 self.eat("VAR")
                 var_name = self.curr_token[1]
                 self.eat(TOKEN_VARIABLE)
                 self.eat("EQ")
-                
-                # Right hand side can be a command or a value
-                if self.curr_token[0] == TOKEN_VARIABLE:
-                    obj_name = self.parse_obj_prefix()
-                    cmd_token = self.curr_token[0]
-                    if cmd_token in TOKEN_TO_CONFIG:
-                        config = TOKEN_TO_CONFIG[cmd_token]
-                        rhs = self.parse_command(obj_name, config)
-                    else:
-                        self.error(f"Unknown command '{cmd_token}'")
-                elif self.curr_token[0] == "NUMBER":
-                    rhs = self.expect_number()
-                elif self.curr_token[0] == "STRING":
-                    rhs = self.expect_string()
-                else:
-                    self.error(f"Unexpected token {self.curr_token[0]} in assignment")
-                
+                rhs = self.commandOrValue()
                 nodes.append(CommandNode(var_name, "assign", [rhs]))
 
-            elif token_type == TOKEN_VARIABLE:
-                obj_name = self.parse_obj_prefix()
-                cmd_token = self.curr_token[0]
-                if cmd_token in TOKEN_TO_CONFIG:
-                    config = TOKEN_TO_CONFIG[cmd_token]
-                    nodes.append(self.parse_command(obj_name, config))
-                else:
-                    self.error(f"Unknown command '{cmd_token}' after object '{obj_name}'")
+        elif token_type == TOKEN_VARIABLE:
+            nodes.append(self.commandOrValue())
 
-            elif token_type in TOKEN_TO_CONFIG:
-                config = TOKEN_TO_CONFIG[token_type]
-                nodes.append(self.parse_command(config.get("default_obj", "global"), config))
+        elif token_type in TOKEN_TO_CONFIG:
+            self.command(nodes)
             
-            else:
-                self.error(f"Unexpected token {token_type}")
+        else:
+            self.error(f"Unexpected token {token_type}")
 
-        return nodes
+        return nodes
+        
+
+    def parse(self):
+        nodes = []
+        while self.curr_token[0] != TOKEN_EOF:
+           self.run(nodes)
+        return nodes

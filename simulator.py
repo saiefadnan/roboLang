@@ -87,6 +87,9 @@ class Simulator:
         print(f"[{name}] position recorded: ({x}, {y})")
         return PosResult(x, y)
 
+    def repeat(self, count):
+        print(f"Repeating {count} times")
+    
     def show(self, value):
         print(f"DISPLAY: {value}")
         

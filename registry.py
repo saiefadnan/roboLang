@@ -76,6 +76,14 @@ COMMANDS = {
         "arg_types": ["int"],
         "handler": "show",
         "type": "global"
+    },
+    "repeat": {
+        "token": "REPEAT",
+        "opcode": 10,
+        "arg_types": ["int"],
+        "handler": "repeat",
+        "type": "global",
+        "block": True
     }
 }
 
@@ -96,14 +104,20 @@ SYMBOLS = {
     ".": "DOT",
     ",": "COMMA",
     "=": "EQ",
-    "#": "COMMENT"
+    "#": "COMMENT",
+    "{": "LBRACE",
+    "}": "RBRACE"
 }
 
 # Calculated Metadata
 OPCODE_TO_CMD = {v["opcode"]: k for k, v in COMMANDS.items()}
 OPCODE_TO_CMD.update({v: k for k, v in CORE_OPCODES.items()})
-print(OPCODE_TO_CMD)
+
+# print(OPCODE_TO_CMD)
+
+
 KEYWORD_TO_TOKEN = {k: v["token"] for k, v in COMMANDS.items()}
 KEYWORD_TO_TOKEN.update(CORE_KEYWORDS)
-
 TOKEN_TO_CONFIG = {v["token"]: {"name": k, **v} for k, v in COMMANDS.items()}
+
+# print(TOKEN_TO_CONFIG)

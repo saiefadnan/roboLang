@@ -28,29 +28,35 @@ class Compiler:
                 bytecode.extend(self.compile_node(rhs))
             else:
                 # Load literal
-                bytecode.append((12, 0, [rhs]))
+                bytecode.append((-12, 0, [rhs], []))
             
             var_id = self.get_obj_id(node.name)
             idToName[var_id] = node.name
-            bytecode.append((OPCODES["STORE"], var_id, []))
+            bytecode.append((OPCODES["STORE"], var_id, [], []))
             return bytecode
 
         # Normal command
         action = OPCODES[node.action]
         obj_id = self.get_obj_id(node.name)
         idToName[obj_id] = node.name
+        nodes = node.nodes
         
         # Compile/Resolve arguments (map names to IDs for variable access)
         resolved_args = []
         for arg in node.args:
-            if isinstance(arg, dict) and arg.get("type") in ["variable", "variable_prop"]:
+           
+            if isinstance(arg, dict) and arg.get("type") in ["variable", "variable_prop"]: 
+                
                 new_arg = arg.copy()
                 new_arg["id"] = self.get_obj_id(arg["name"])
                 resolved_args.append(new_arg)
             else:
                 resolved_args.append(arg)
-                
-        bytecode.append((action, obj_id, resolved_args))
+        if len(nodes)>0:
+            full_nested_bytecode = self.compile(nodes)
+            bytecode.append((action, obj_id, resolved_args, full_nested_bytecode))
+        else:
+            bytecode.append((action, obj_id, resolved_args, []))
         return bytecode
 
     def compile(self, nodes):

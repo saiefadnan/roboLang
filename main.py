@@ -10,7 +10,7 @@ with open("nano.rl", "r") as f:
     code = f.read()
 
 if len(code) == 0:
-    print("Error: Empty source code")
+    print("Nothing to do 😴")
     exit()
 
 lexer = Lexer(code)
